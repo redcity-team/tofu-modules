@@ -1,33 +1,79 @@
 variable "name" {
-  type = string
+  description = "Name of compute instance."
+  type        = string
+}
+
+variable "name_prefix" {
+  description = "The prefix used for naming resources."
+  type        = string
+  default     = ""
 }
 
 variable "flavor_name" {
-  type    = string
-  default = "STD2-1-1"
+  description = "The name of the desired flavor for the server."
+  type        = string
+  default     = "STD2-1-1"
 }
 
 variable "availability_zone" {
-  type    = string
-  default = "MS1"
+  description = "The VKCS availability zone in which to create the server."
+  type        = string
+  default     = "MS1"
 }
 
 variable "user_data" {
-  type    = string
-  default = ""
+  description = "The user data to provide when launching the instance."
+  type        = string
+  default     = ""
 }
 
 variable "tags" {
-  type    = set(string)
-  default = []
+  description = "Map of tags that will be added to created resources."
+  type        = set(string)
+  default     = []
 }
 
-variable "block_device" {
+variable "root_volume" {
+  description = "The instance root volume block device configuration."
+  type = object({
+    size     = optional(number, 10)
+    type     = optional(string, "ceph-hdd")
+    image_id = string
+  })
+}
+
+variable "swap_volume" {
+  description = "The instance swap volume block device configuration."
+  type = object({
+    size = optional(number, 10)
+    type = optional(string, "ceph-hdd")
+  })
+  default = null
+}
+
+variable "block_devices" {
+  description = "The additional block device configuration to attach to instance."
   type = list(object({
     name = string
     size = number
-    type = string
+    type = optional(string, "ceph-hdd")
   }))
+  default = []
+}
+
+variable "network_ports" {
+  description = "The network port configuration to attach to instance."
+  type = list(object({
+    name               = string
+    subnet_id          = string
+    ip_address         = optional(string)
+    floating_ip        = optional(string)
+    security_group_ids = set(string)
+  }))
+}
+
+variable "ansible_groups" {
+  type    = list(string)
   default = []
 }
 
@@ -36,49 +82,5 @@ variable "personality" {
     file    = string
     content = string
   }))
-  default = []
-}
-
-variable "volume_type" {
-  type    = string
-  default = "ceph-hdd"
-}
-
-variable "root_volume_size" {
-  type    = number
-  default = 10
-}
-
-variable "swap_volume_size" {
-  type    = number
-  default = null
-}
-
-variable "root_image_id" {
-  type = string
-}
-
-variable "network_id" {
-  type = string
-}
-
-variable "network" {
-  type = list(object({
-    port_name          = string
-    subnet_id          = string
-    security_group_ids = set(string)
-  }))
-}
-
-variable "floating_ip" {
-  type = list(object({
-    address = string
-    port    = number
-  }))
-  default = []
-}
-
-variable "ansible_groups" {
-  type    = list(string)
   default = []
 }
