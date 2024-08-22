@@ -3,7 +3,8 @@ variable "name" {
 }
 
 variable "dns_domain" {
-  type = string
+  type    = string
+  default = ""
 }
 
 variable "router_id" {
@@ -12,7 +13,10 @@ variable "router_id" {
 
 variable "subnets" {
   type = map(object({
-    name = string
     cidr = string
+    dhcp_pools = optional(list(object({
+      start = string
+      end   = string
+    })), [])
   }))
 }

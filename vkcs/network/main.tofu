@@ -6,9 +6,18 @@ resource "vkcs_networking_network" "this" {
 resource "vkcs_networking_subnet" "this" {
   for_each = var.subnets
 
-  name       = each.value.name
+  name       = "${var.name}-${each.key}"
   network_id = vkcs_networking_network.this.id
   cidr       = each.value.cidr
+
+  dynamic "allocation_pool" {
+    for_each = each.value.dhcp_pools
+
+    content {
+      start = allocation_pool.value.start
+      end   = allocation_pool.value.end
+    }
+  }
 }
 
 resource "vkcs_networking_router_interface" "this" {
