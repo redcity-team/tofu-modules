@@ -1,39 +1,41 @@
 data "vkcs_networking_subnet" "this" {
-  count = length(var.network_ports)
+  for_each = var.network_ports
 
-  subnet_id = var.network_ports[count.index].subnet_id
+  subnet_id = each.value.subnet_id
 }
 
 resource "vkcs_networking_port" "this" {
-  count = length(var.network_ports)
+  for_each = var.network_ports
 
-  name       = var.name_prefix != "" ? "${var.name_prefix}-${var.network_ports[count.index].name}" : var.network_ports[count.index].name
-  network_id = data.vkcs_networking_subnet.this[count.index].network_id
+  name       = var.name_prefix != "" ? "${var.name_prefix}-${var.name}-${each.key}" : "${var.name}-${each.key}"
+  network_id = data.vkcs_networking_subnet.this[each.key].network_id
   fixed_ip {
-    subnet_id  = var.network_ports[count.index].subnet_id
-    ip_address = var.network_ports[count.index].ip_address
+    subnet_id  = each.value.subnet_id
+    ip_address = each.value.ip_address
   }
   full_security_groups_control = true
-  security_group_ids           = var.network_ports[count.index].security_group_ids
+  security_group_ids           = each.value.security_group_ids
 }
 
 resource "vkcs_blockstorage_volume" "this" {
-  count = length(var.block_devices)
+  for_each = {
+    for name, block_device in var.block_devices : name => block_device if block_device.persist
+  }
 
   availability_zone = var.availability_zone
-  name              = var.name_prefix != "" ? "${var.name_prefix}-${var.block_devices[count.index].name}" : var.block_devices[count.index].name
-  size              = var.block_devices[count.index].size
-  volume_type       = var.block_devices[count.index].type
+  name              = var.name_prefix != "" ? "${var.name_prefix}-${var.name}-${each.key}" : "${var.name}-${each.key}"
+  size              = each.value.size
+  volume_type       = each.value.type
 }
 
 resource "vkcs_compute_floatingip_associate" "this" {
   for_each = {
-    for port in var.network_ports : index(var.network_ports, port) => port.floating_ip if port.floating_ip != null
+    for name, port in var.network_ports : name => port if port.floating_ip != null
   }
 
-  floating_ip = each.value
+  floating_ip = each.value.floating_ip
   instance_id = vkcs_compute_instance.this.id
-  fixed_ip    = vkcs_compute_instance.this.network[each.key].fixed_ip_v4
+  fixed_ip    = vkcs_networking_port.this[each.key].all_fixed_ips[0]
 }
 
 resource "ansible_host" "this" {
@@ -55,35 +57,20 @@ resource "vkcs_compute_instance" "this" {
     delete_on_termination = true
   }
   dynamic "block_device" {
-    for_each = var.swap_volume[*]
+    for_each = var.block_devices
     content {
-      source_type           = "blank"
+      source_type           = block_device.value.persist ? "volume" : "blank"
       destination_type      = "volume"
-      delete_on_termination = true
-      volume_size           = var.swap_volume.size
-      volume_type           = var.swap_volume.type
-    }
-  }
-  dynamic "block_device" {
-    for_each = vkcs_blockstorage_volume.this
-    content {
-      source_type      = "volume"
-      destination_type = "volume"
-      uuid             = vkcs_blockstorage_volume.this[block_device.key].id
+      delete_on_termination = !block_device.value.persist
+      volume_size           = !block_device.value.persist ? block_device.value.size : null
+      volume_type           = !block_device.value.persist ? block_device.value.type : null
+      uuid                  = block_device.value.persist ? vkcs_blockstorage_volume.this[block_device.key].id : null
     }
   }
   dynamic "network" {
     for_each = vkcs_networking_port.this
     content {
       port = vkcs_networking_port.this[network.key].id
-    }
-  }
-  config_drive = length(var.personality) != 0 ? true : null
-  dynamic "personality" {
-    for_each = var.personality
-    content {
-      file    = personality.value.file
-      content = personality.value.content
     }
   }
   user_data           = var.user_data

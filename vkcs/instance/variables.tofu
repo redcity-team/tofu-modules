@@ -42,29 +42,19 @@ variable "root_volume" {
   })
 }
 
-variable "swap_volume" {
-  description = "The instance swap volume block device configuration."
-  type = object({
-    size = optional(number, 10)
-    type = optional(string, "ceph-hdd")
-  })
-  default = null
-}
-
 variable "block_devices" {
   description = "The additional block device configuration to attach to instance."
-  type = list(object({
-    name = string
-    size = number
-    type = optional(string, "ceph-hdd")
+  type = map(object({
+    size    = number
+    type    = optional(string, "ceph-hdd")
+    persist = optional(bool, true)
   }))
-  default = []
+  default = {}
 }
 
 variable "network_ports" {
   description = "The network port configuration to attach to instance."
-  type = list(object({
-    name               = string
+  type = map(object({
     subnet_id          = string
     ip_address         = optional(string)
     floating_ip        = optional(string)
@@ -74,13 +64,5 @@ variable "network_ports" {
 
 variable "ansible_groups" {
   type    = list(string)
-  default = []
-}
-
-variable "personality" {
-  type = list(object({
-    file    = string
-    content = string
-  }))
   default = []
 }
