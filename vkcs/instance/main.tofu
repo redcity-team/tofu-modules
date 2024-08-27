@@ -73,6 +73,14 @@ resource "vkcs_compute_instance" "this" {
       port = vkcs_networking_port.this[network.key].id
     }
   }
+  config_drive = var.network_config != null ? true : null
+  dynamic "personality" {
+    for_each = var.network_config[*]
+    content {
+      file    = "/etc/cloud/cloud.cfg.d/99-custom-networking.cfg"
+      content = var.network_config
+    }
+  }
   user_data           = var.user_data
   tags                = var.tags
   stop_before_destroy = true

@@ -62,6 +62,12 @@ variable "network_ports" {
   }))
 }
 
+variable "network_config" {
+  description = "The override network configuration for the instance."
+  type        = string
+  default     = null
+}
+
 variable "ansible_groups" {
   type    = list(string)
   default = []
