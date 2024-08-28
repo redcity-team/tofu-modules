@@ -81,6 +81,12 @@ resource "vkcs_compute_instance" "this" {
       content = var.network_config
     }
   }
+  dynamic "scheduler_hints" {
+    for_each = var.server_group[*]
+    content {
+      group = var.server_group
+    }
+  }
   user_data           = var.user_data
   tags                = var.tags
   stop_before_destroy = true

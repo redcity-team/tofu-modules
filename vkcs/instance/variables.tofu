@@ -68,6 +68,12 @@ variable "network_config" {
   default     = null
 }
 
+variable "server_group" {
+  description = "The instance will be placed into that group."
+  type        = string
+  default     = null
+}
+
 variable "ansible_groups" {
   type    = list(string)
   default = []
